@@ -1,297 +1,309 @@
-# Audio Customer Support Agent
+# 🎙️ Audio Customer Support Agent
 
-A modular audio-based customer support agent that uses Speech-to-Text (STT), Large Language Model (LLM) with Retrieval-Augmented Generation (RAG), and Text-to-Speech (TTS) technologies.
+A full-stack AI-powered customer support agent that processes voice input, generates intelligent responses, and returns audio output — with full transcript support.
 
-## Project Overview
+**Pipeline:** `Audio Input → STT → LLM Agent → TTS → Audio Output + Transcript`
 
-This project provides a **blueprint** for implementing an audio customer support agent. Students implement the core functionality by completing TODO sections throughout the codebase.
+---
 
-### Pipeline Flow
-```
-Audio Input → STT → LLM Agent (with RAG) → TTS → Audio Output
-```
-
-## Architecture
-
-### Core Components
-
-1. **STT (Speech-to-Text)**: `src/stt/base_stt.py`
-   - Generic STT service template with multiple implementation options
-   - Supports both API services (Deepgram, AssemblyAI) and local models (Whisper, Wav2Vec2)
-
-2. **LLM Agent**: `src/llm/agent.py`
-   - Customer support agent using LangChain ReAct framework
-   - Complete RAG system with 16 predefined customer support documents
-   - ChromaDB integration for semantic search
-
-3. **TTS (Text-to-Speech)**: `src/tts/base_tts.py`
-   - Generic TTS service template with multiple implementation options
-   - Supports API services (ElevenLabs, OpenAI) and local models (Edge TTS, Coqui TTS)
-
-4. **Pipeline**: `src/pipeline.py`
-   - Orchestrates the complete STT → LLM → TTS flow
-   - Handles configuration and error management
-
-5. **API Server**: `src/api/server.py`
-   - FastAPI server with REST endpoints for testing
-   - Health monitoring and debug endpoints
-
-6. **Testing UI**: `streamlit_app.py`
-   - Comprehensive testing interface with 4 tabs
-   - Audio recording, playback, and health monitoring
-
-## Project Structure
+## 📁 Project Structure
 
 ```
 audio_support_agent/
 ├── src/
-│   ├── stt/
-│   │   ├── __init__.py
-│   │   └── base_stt.py          # STT implementation template
-│   ├── llm/
-│   │   ├── __init__.py
-│   │   └── agent.py             # LLM agent with complete RAG system
-│   ├── tts/
-│   │   ├── __init__.py
-│   │   └── base_tts.py          # TTS implementation template  
+│   ├── pipeline.py          # Core STT → LLM → TTS orchestration
 │   ├── api/
-│   │   ├── __init__.py
-│   │   └── server.py            # FastAPI server
-│   ├── utils/
-│   │   ├── __init__.py
-│   │   └── kb_test.py           # Knowledge base testing utility
-│   ├── __init__.py
-│   └── pipeline.py              # Main orchestrator
-├── docs/
-│   ├── ASSIGNMENT_GUIDE.md      # Implementation instructions
-│   └── RAG_IMPLEMENTATION_GUIDE.md  # Detailed RAG guide
-├── tests/                       # Test files
-├── data/                        # ChromaDB storage (created automatically)
-├── requirements.txt             # Dependencies
-├── .env.example                # Environment template
-├── streamlit_app.py            # Testing UI
-└── README.md                   # This file
+│   │   └── server.py        # FastAPI REST endpoints
+│   ├── stt/
+│   │   └── base_stt.py      # Speech-to-Text service
+│   ├── tts/
+│   │   └── base_tts.py      # Text-to-Speech service
+│   ├── llm/
+│   │   └── agent.py         # LLM customer support agent
+│   └── utils/
+│       └── kb_test.py       # Knowledge base utilities
+├── streamlit_app.py         # Web UI for testing
+├── tests/
+│   └── test_stt.py
+├── data/                    # Knowledge base documents
+├── requirements.txt
+├── .env.example
+└── README.md
 ```
 
-## Quick Start
+---
 
-### 1. Installation
+## ⚙️ Setup
+
+### 1. Clone & create virtual environment
 
 ```bash
-# Navigate to the project
+git clone <your-repo-url>
 cd audio_support_agent
-
-# Create virtual environment
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# Install core dependencies
-pip install fastapi uvicorn streamlit requests numpy
-pip install langchain chromadb sentence-transformers
+# Windows
+venv\Scripts\activate
 
-# Optional: For audio recording in UI
-pip install sounddevice
+# Mac/Linux
+source venv/bin/activate
 ```
 
-### 2. Environment Setup
+### 2. Install dependencies
 
 ```bash
-# Copy environment template
+pip install -r requirements.txt
+```
+
+### 3. Configure environment variables
+
+```bash
 cp .env.example .env
-
-# Edit .env with your API keys (based on chosen services)
-# Example:
-STT_API_KEY=your_deepgram_key_here
-LLM_API_KEY=your_openai_key_here
-TTS_API_KEY=your_elevenlabs_key_here
 ```
 
-### 3. Service Options
+Edit `.env` and fill in your API keys:
 
-**You can choose from multiple options for each component:**
+```env
+OPENAI_API_KEY=your_openai_api_key_here
+STT_API_KEY=your_stt_api_key_here
+TTS_API_KEY=your_tts_api_key_here
+```
 
-**STT Options:**
-- **API Services**: Deepgram (free $200), AssemblyAI, Azure Speech, Google Cloud Speech
-- **Local Models**: OpenAI Whisper, Wav2Vec2, Vosk, Coqui STT, SpeechRecognition
+> **Key sources:**
+> - OpenAI → https://platform.openai.com/api-keys
+> - Deepgram (STT) → https://console.deepgram.com/
+> - ElevenLabs (TTS) → https://elevenlabs.io/
 
-**LLM Options:**
-- **API Services**: OpenAI, Anthropic Claude, Google Gemini
-- **Local Models**: Ollama, Hugging Face Transformers
+---
 
-**TTS Options:**
-- **API Services**: ElevenLabs (free 10k chars), OpenAI TTS, Azure Speech, Google Cloud TTS
-- **Local Models**: Coqui TTS, Parler TTS, Bark, Edge TTS (free), Festival, eSpeak
+## 🚀 Running the Application
 
-**Quick Start Combinations:**
-- **Completely Free**: Whisper + Local LLM + Edge TTS
-- **Minimal Cost**: Whisper + OpenAI API + Edge TTS  
-- **Full Cloud**: Deepgram + OpenAI + ElevenLabs
+### Start the API server
 
-## Testing Your Implementation
-
-### Two-Terminal Workflow
-
-**Terminal 1 - Start API Server:**
 ```bash
+cd audio_support_agent
 python -m src.api.server
 ```
 
-**Terminal 2 - Launch Testing UI:**
+Server starts at `http://localhost:8000`
+
+### Start the Streamlit UI
+
 ```bash
 streamlit run streamlit_app.py
 ```
 
-### Testing Interface Features
+UI opens at `http://localhost:8501`
 
-The Streamlit UI provides 4 main tabs:
+---
 
-1. **Text Chat**: Test LLM agent responses without audio processing
-2. **Audio Chat**: Complete pipeline testing with audio recording/upload
-3. **Health Monitor**: Real-time component status and debugging
-4. **Documentation**: Built-in help and troubleshooting
+## 🌐 API Endpoints
 
-### API Endpoints
+### `GET /health`
+Check status of all pipeline components.
 
-Once the server is running, you can access:
-
-- **API Documentation**: http://localhost:8000/docs
-- **Health Check**: http://localhost:8000/health
-- **Root Info**: http://localhost:8000/
-
-**Manual API Testing:**
-```bash
-# Health check
-curl http://localhost:8000/health
-
-# Text chat
-curl -X POST http://localhost:8000/chat/text \
-  -H "Content-Type: application/json" \
-  -d '{"text": "What is your return policy?"}'
-
-# Audio upload (full pipeline)
-curl -X POST http://localhost:8000/chat/audio \
-  -F "audio=@test_audio.wav" --output response.mp3
+```powershell
+# PowerShell
+Invoke-RestMethod -Uri "http://localhost:8000/health"
 ```
 
-## Development Utilities
-
-### Knowledge Base Testing
-```bash
-# Test RAG implementation
-python src/utils/kb_test.py
-```
-This utility shows:
-- Knowledge base structure (16 customer support documents)
-- Sample test queries
-- Your RAG implementation results
-
-### Running Tests
-```bash
-# Run all tests
-pytest
-
-# Run with coverage
-pytest --cov=src tests/
-
-# Run specific component tests
-pytest tests/test_stt.py -v
-pytest tests/test_tts.py -v
-pytest tests/test_llm.py -v
+**Response:**
+```json
+{
+  "status": "healthy",
+  "components": {
+    "pipeline_initialized": true,
+    "stt_ready": true,
+    "llm_ready": true,
+    "tts_ready": true
+  },
+  "message": "All components ready"
+}
 ```
 
-## What's Provided vs What You Implement
+---
 
-### Already Complete (Provided)
+### `POST /chat/text`
+Send a text query and receive a text response.
 
-**RAG Knowledge Base:**
-- 16 comprehensive customer support documents
-- Automatic ChromaDB setup and document ingestion
-- Embedding generation with sentence-transformers
-- Persistent storage (survives server restarts)
+```powershell
+# PowerShell
+Invoke-RestMethod -Method POST -Uri "http://localhost:8000/chat/text" `
+  -ContentType "application/json" `
+  -Body '{"text": "What is your return policy?"}'
+```
 
-**Infrastructure:**
-- Complete FastAPI server with all endpoints
-- Streamlit testing interface with 4 tabs
-- Abstract base classes for all components
-- Configuration management and environment setup
-- Test utilities and documentation
+**Response:**
+```json
+{
+  "response_text": "We offer a 30-day return policy for all products...",
+  "audio_available": true,
+  "processing_time_ms": 950
+}
+```
 
-**Pipeline Framework:**
-- Complete orchestration logic structure
-- Error handling and logging framework
-- Health monitoring system
+---
 
-### Your Implementation Tasks
+### `POST /chat/audio`
+Upload an audio file and receive a JSON response with base64-encoded audio + transcript.
 
-**Core Components (Required):**
-1. **RAG Search Logic**: Complete `_rag_search()` method in `CustomerSupportAgent`
-2. **STT Implementation**: Complete `STTService` class methods (initialize, transcribe, cleanup)
-3. **TTS Implementation**: Complete `TTSService` class methods (initialize, synthesize, cleanup)
-4. **Pipeline Integration**: Complete pipeline initialization and audio processing flow
-5. **Server Configuration**: Configure startup with your chosen services
+```powershell
+# PowerShell
+$form = @{ audio = Get-Item "test.wav" }
+Invoke-RestMethod -Method POST -Uri "http://localhost:8000/chat/audio" -Form $form
+```
 
-**See `docs/ASSIGNMENT_GUIDE.md` for detailed implementation instructions.**
+**Response:**
+```json
+{
+  "success": true,
+  "audio_response": "<base64_encoded_mp3>",
+  "transcript": {
+    "user_input": "How long does shipping take?",
+    "agent_response": "Shipping typically takes 3-5 business days..."
+  },
+  "processing_time_ms": 2050
+}
+```
 
-## Troubleshooting
+---
 
-### Common Setup Issues
+### `GET /chat/audio/{text}`
+Convert text directly to audio (TTS only, no STT or LLM).
 
-**Import Errors:**
-- Ensure you're running from the project root directory
-- Verify all dependencies are installed: `pip install -r requirements.txt`
+```powershell
+Invoke-RestMethod -Uri "http://localhost:8000/chat/audio/Hello%20world"
+```
 
-**Server Won't Start:**
-- Check if port 8000 is already in use
-- Verify environment variables are set correctly
+---
 
-**Audio Issues:**
-- For recording: Install `pip install sounddevice`
-- For playback: Ensure audio files are in supported formats (WAV recommended)
+### `POST /debug/stt`
+Test the STT component in isolation.
 
-**API Quota Issues:**
-- Check your API key validity and usage limits
-- Consider using local models for development/testing
+```powershell
+$form = @{ audio = Get-Item "test.wav" }
+Invoke-RestMethod -Method POST -Uri "http://localhost:8000/debug/stt" -Form $form
+```
 
-### Debug Resources
+---
 
-1. **Health Endpoint**: Shows which components are working
-2. **Server Logs**: Detailed error messages and processing info
-3. **Test Utilities**: `kb_test.py` for RAG debugging
-4. **Streamlit UI**: Real-time component monitoring
+## 🖥️ Streamlit UI
 
-## Learning Objectives
+The web interface has 4 tabs:
 
-By completing this assignment, you will learn:
+| Tab | Purpose |
+|-----|---------|
+| **Text Chat** | Type messages and see agent responses with timing |
+| **Audio Chat** | Record or upload audio → plays response + shows transcript |
+| **Health Monitor** | Live status of all pipeline components |
+| **Documentation** | Quick reference guide |
 
-1. **Async Python Programming**: Working with async/await patterns
-2. **API Integration**: Multiple third-party service integration
-3. **Modular Design**: Creating reusable, testable components
-4. **RAG Implementation**: Building retrieval-augmented generation systems
-5. **FastAPI Development**: Creating REST APIs for ML applications
-6. **Error Handling**: Robust error handling in production systems
-7. **Audio Processing**: Working with audio data in Python
+### Audio Chat tab layout
 
-## Documentation
+```
+┌─────────────────────┬───────────────────────────────────┐
+│   Audio Controls    │         Transcript                │
+│                     │                                   │
+│  [Record Audio]     │  🗣️ You said:                     │
+│  [Upload File]      │  "What is your return policy?"    │
+│                     │                                   │
+│  [Send to Agent]    │  🤖 Agent responded:              │
+│                     │  "We offer a 30-day return..."    │
+│                     │                                   │
+│                     │  ⏱️ Processing: 2.05s             │
+└─────────────────────┴───────────────────────────────────┘
+```
 
-- **Implementation Guide**: `docs/ASSIGNMENT_GUIDE.md` - Detailed coding instructions
-- **RAG Guide**: `docs/RAG_IMPLEMENTATION_GUIDE.md` - Specific RAG implementation help
-- **API Documentation**: Available at `/docs` when server is running
+---
 
-## Support
+## 🧪 Testing
 
-If you encounter issues:
+### Create a test WAV file (if you don't have one)
 
-1. Check the health endpoint to see component status
-2. Review server logs for detailed error messages  
-3. Use the test utilities to debug individual components
-4. Verify API keys and service configurations
-5. Check the troubleshooting section in documentation
+```python
+python -c "
+import wave, struct, math
+with wave.open('test.wav', 'w') as f:
+    f.setnchannels(1); f.setsampwidth(2); f.setframerate(16000)
+    f.writeframes(struct.pack('<' + 'h'*16000, *[int(3000*math.sin(2*math.pi*440*i/16000)) for i in range(16000)]))
+print('test.wav created')
+"
+```
 
-## Getting Help
+### Run unit tests
 
-- Use the provided test utilities (`kb_test.py`, Streamlit UI)
-- Check the comprehensive documentation in the `docs/` folder
-- Review the sample implementations and code comments
-- Test components individually before integration
+```bash
+pytest tests/ -v
+```
 
-Good luck with your implementation!
+---
+
+## 🔧 Configuration Options
+
+### STT Services (choose one)
+
+| Service | Type | Env Var |
+|---------|------|---------|
+| OpenAI Whisper | Local model | *(no key needed)* |
+| Deepgram | API | `DEEPGRAM_API_KEY` |
+| AssemblyAI | API | `ASSEMBLYAI_API_KEY` |
+
+### LLM Services (choose one)
+
+| Service | Env Var |
+|---------|---------|
+| OpenAI GPT | `OPENAI_API_KEY` |
+| Anthropic Claude | `ANTHROPIC_API_KEY` |
+
+### TTS Services (choose one)
+
+| Service | Type | Env Var |
+|---------|------|---------|
+| Edge TTS | Free, local | *(no key needed)* |
+| ElevenLabs | API | `ELEVENLABS_API_KEY` |
+| OpenAI TTS | API | `OPENAI_API_KEY` |
+| Azure Speech | API | `AZURE_SPEECH_KEY` |
+
+---
+
+## 🛠️ Troubleshooting
+
+**Server not starting**
+- Check all required API keys are set in `.env`
+- Verify virtual environment is activated
+- Check port 8000 is not in use: `netstat -ano | findstr :8000`
+
+**Audio recording not working in UI**
+- Install sounddevice: `pip install sounddevice`
+- Allow microphone permissions in browser/OS
+
+**STT returns empty transcription**
+- Ensure audio file is valid WAV format, 16kHz mono
+- Check STT API key is correct
+- Try the `/debug/stt` endpoint to isolate the issue
+
+**`curl` commands not working on Windows**
+- Use PowerShell's `Invoke-RestMethod` instead (see examples above)
+- Or install Git Bash and use standard curl commands
+
+---
+
+## 📦 Key Dependencies
+
+| Package | Purpose |
+|---------|---------|
+| `fastapi` | REST API framework |
+| `uvicorn` | ASGI server |
+| `langchain` | LLM agent framework |
+| `chromadb` | Vector store for RAG |
+| `sentence-transformers` | Embeddings |
+| `pydub` / `librosa` | Audio processing |
+| `streamlit` | Web UI |
+| `edge-tts` | Free TTS voices |
+| `openai-whisper` | Local STT model |
+
+---
+
+## 📄 License
+
+MIT License — free to use and modify.
