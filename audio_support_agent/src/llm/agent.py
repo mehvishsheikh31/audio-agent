@@ -3,8 +3,6 @@ LLM Agent with RAG Tool Integration
 
 This module defines the customer support agent that uses a Language Model
 with Retrieval-Augmented Generation (RAG) capabilities.
-
-Students should implement the RAG tool function and complete the agent setup.
 """
 
 from abc import ABC, abstractmethod
@@ -16,142 +14,104 @@ from langchain_core.prompts import PromptTemplate
 
 
 class BaseAgent(ABC):
-    """
-    Abstract base class for LLM agents.
-    """
-    
+    """Abstract base class for LLM agents."""
+
     def __init__(self, config: Optional[Dict[str, Any]] = None):
-        """
-        Initialize the agent.
-        
-        Args:
-            config: Configuration dictionary containing LLM settings, prompts, etc.
-        """
         self.config = config or {}
         self.is_initialized = False
         self.memory = ConversationBufferMemory(
             memory_key="chat_history",
             return_messages=True
         )
-    
+
     @abstractmethod
     async def initialize(self) -> None:
-        """Initialize the agent with LLM and tools."""
         pass
-    
+
     @abstractmethod
     async def process_query(self, text: str, **kwargs) -> str:
-        """
-        Process a text query and return a response.
-        
-        Args:
-            text: Input text from the user
-            **kwargs: Additional context or parameters
-            
-        Returns:
-            str: Agent's response
-        """
         pass
-    
+
     @abstractmethod
     async def cleanup(self) -> None:
-        """Cleanup resources."""
         pass
 
 
 class CustomerSupportAgent(BaseAgent):
     """
-    Customer Support Agent implementation using LangChain ReAct agent.
-    
-    This agent uses a Language Model with RAG capabilities to answer
-    customer support queries by retrieving relevant information from
-    a knowledge base.
+    Customer Support Agent using LangChain ReAct agent with RAG.
     """
-    
+
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         super().__init__(config)
         self.llm = None
         self.agent = None
         self.agent_executor = None
         self.knowledge_base = None
-        
+
     async def initialize(self) -> None:
-        """
-        TODO: Initialize the customer support agent.
-        
-        Steps:
-        1. Initialize the LLM (e.g., OpenAI, Anthropic, local models)
-        2. Set up the knowledge base/vector store
-        3. Create RAG tool
-        4. Create ReAct agent with tools
-        5. Set up agent executor
-        """
-        # TODO: Initialize LLM
-        # Example: from langchain_openai import ChatOpenAI
-        # self.llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0.7)
-        
-        # TODO: Initialize knowledge base
+        """Initialize LLM, knowledge base, tools, and agent."""
+
+        # Step 1: Initialize LLM
+        from langchain_openai import ChatOpenAI
+        import os
+
+        api_key = self.config.get("api_key") or os.getenv("OPENAI_API_KEY")
+        model = self.config.get("model", "gpt-3.5-turbo")
+        temperature = self.config.get("temperature", 0.7)
+
+        self.llm = ChatOpenAI(
+            model=model,
+            temperature=temperature,
+            api_key=api_key
+        )
+
+        # Step 2: Set up knowledge base
         await self._setup_knowledge_base()
-        
-        # TODO: Create tools including RAG tool
+
+        # Step 3: Create tools
         tools = await self._create_tools()
-        
-        # TODO: Create agent
+
+        # Step 4: Create agent
         await self._create_agent(tools)
-        
+
         self.is_initialized = True
-    
+        print("CustomerSupportAgent initialized successfully.")
+
     async def _setup_knowledge_base(self) -> None:
-        """
-        Set up the knowledge base for RAG using ChromaDB.
-        
-        This method automatically creates embeddings and stores them in ChromaDB.
-        Students only need to implement the retrieval logic in _rag_search().
-        """
+        """Set up ChromaDB knowledge base with predefined documents."""
         try:
             import chromadb
             from sentence_transformers import SentenceTransformer
             import os
             import hashlib
-            
-            # Initialize ChromaDB (persistent storage)
+
             db_path = "./data/chroma_db"
             os.makedirs(db_path, exist_ok=True)
-            
+
             self.chroma_client = chromadb.PersistentClient(path=db_path)
-            
-            # Collection name
             collection_name = "customer_support_kb"
-            
-            # Check if collection already exists and has data
+
             try:
                 self.collection = self.chroma_client.get_collection(collection_name)
                 if self.collection.count() > 0:
                     print(f"Knowledge base already exists with {self.collection.count()} documents")
                     return
             except Exception:
-                # Collection doesn't exist, create it
                 self.collection = self.chroma_client.create_collection(
                     name=collection_name,
                     metadata={"description": "Customer support knowledge base"}
                 )
-            
-            # Load predefined customer support documents
+
             knowledge_documents = self._get_customer_support_documents()
-            
-            # Initialize embedding model
             self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-            
-            # Process and store documents
+
             print(f"Ingesting {len(knowledge_documents)} documents into knowledge base...")
-            
-            documents = []
-            metadatas = []
-            ids = []
-            
+
+            documents, metadatas, ids = [], [], []
+
             for i, doc_data in enumerate(knowledge_documents):
                 doc_id = f"doc_{i}_{hashlib.md5(doc_data['content'].encode()).hexdigest()[:8]}"
-                
                 documents.append(doc_data['content'])
                 metadatas.append({
                     'category': doc_data['category'],
@@ -159,29 +119,17 @@ class CustomerSupportAgent(BaseAgent):
                     'doc_id': doc_id
                 })
                 ids.append(doc_id)
-            
-            # Add documents to ChromaDB (it will automatically create embeddings)
-            self.collection.add(
-                documents=documents,
-                metadatas=metadatas,
-                ids=ids
-            )
-            
+
+            self.collection.add(documents=documents, metadatas=metadatas, ids=ids)
             print(f"Successfully ingested {len(documents)} documents into ChromaDB")
-            
+
         except Exception as e:
             print(f"Error setting up knowledge base: {str(e)}")
             raise
-    
+
     def _get_customer_support_documents(self) -> List[Dict[str, str]]:
-        """
-        Predefined customer support knowledge base.
-        
-        This is the definitive knowledge base that students will work with.
-        Do not modify these documents - they form the complete knowledge base.
-        """
+        """Predefined customer support knowledge base documents."""
         return [
-            # Return Policy
             {
                 "title": "Return Policy Overview",
                 "category": "returns",
@@ -189,7 +137,7 @@ class CustomerSupportAgent(BaseAgent):
             },
             {
                 "title": "Return Process Steps",
-                "category": "returns", 
+                "category": "returns",
                 "content": "To initiate a return: 1) Log into your account and go to Order History, 2) Select the order and click 'Return Items', 3) Choose the items to return and reason, 4) Print the prepaid return label, 5) Pack items securely and attach the label, 6) Drop off at any UPS location or schedule pickup."
             },
             {
@@ -197,8 +145,6 @@ class CustomerSupportAgent(BaseAgent):
                 "category": "returns",
                 "content": "The following items cannot be returned: personalized or customized products, perishable goods, digital downloads, gift cards, intimate apparel, and items marked as final sale. Health and safety regulations prevent returns of opened cosmetics and personal care items."
             },
-            
-            # Shipping Information
             {
                 "title": "Shipping Methods and Times",
                 "category": "shipping",
@@ -214,8 +160,6 @@ class CustomerSupportAgent(BaseAgent):
                 "category": "shipping",
                 "content": "Once your order ships, you'll receive a tracking number via email. Track your package using the tracking number on our website or the carrier's website. You can also track orders by logging into your account and viewing Order History. Tracking updates may take 24 hours to appear."
             },
-            
-            # Customer Support
             {
                 "title": "Contact Information",
                 "category": "support",
@@ -226,8 +170,6 @@ class CustomerSupportAgent(BaseAgent):
                 "category": "support",
                 "content": "Our support team response times: Live chat - immediate during business hours, Phone support - average wait time under 3 minutes, Email support - response within 4 hours during business days, Support tickets - response within 24 hours. Premium customers receive priority support with faster response times."
             },
-            
-            # Warranty and Technical Support
             {
                 "title": "Product Warranty",
                 "category": "warranty",
@@ -238,8 +180,6 @@ class CustomerSupportAgent(BaseAgent):
                 "category": "technical",
                 "content": "Free technical support is available for all electronic products. Our certified technicians provide assistance with setup, troubleshooting, and software issues. Technical support is available Monday-Friday 8 AM - 8 PM EST via phone or email. We also offer remote assistance for compatible devices."
             },
-            
-            # Account and Orders
             {
                 "title": "Account Management",
                 "category": "account",
@@ -250,8 +190,6 @@ class CustomerSupportAgent(BaseAgent):
                 "category": "orders",
                 "content": "Orders can be modified or canceled within 1 hour of placement if not yet processed. Contact customer service immediately to make changes. Once an order is processed and shipped, it cannot be modified. You can return unwanted items following our return policy."
             },
-            
-            # Payment and Billing
             {
                 "title": "Payment Methods",
                 "category": "payment",
@@ -262,8 +200,6 @@ class CustomerSupportAgent(BaseAgent):
                 "category": "billing",
                 "content": "Billing occurs when your order ships. You'll receive an email confirmation with invoice details. Invoices are available in your account under Order History. For business purchases, we can provide detailed invoices with tax information. Contact our billing department for any payment disputes or questions."
             },
-            
-            # Product Information
             {
                 "title": "Product Availability",
                 "category": "products",
@@ -275,146 +211,127 @@ class CustomerSupportAgent(BaseAgent):
                 "content": "Each product page includes detailed size charts and fit information. For apparel, we recommend checking measurements against our size guide rather than relying on size labels from other brands. If you're between sizes, we generally recommend sizing up. Our customer service team can provide personalized fit recommendations."
             }
         ]
-    
+
     async def _create_tools(self) -> List[Tool]:
-        """
-        TODO: Create tools for the agent, including the RAG tool.
-        
-        Returns:
-            List[Tool]: List of tools available to the agent
-        """
-        tools = []
-        
-        # TODO: Implement RAG tool
+        """Create tools for the agent including the RAG search tool."""
         rag_tool = Tool(
             name="knowledge_search",
-            description="Search the customer support knowledge base for relevant information",
+            description=(
+                "Search the customer support knowledge base for relevant information. "
+                "Use this tool to answer questions about returns, shipping, payments, "
+                "warranty, account management, and other customer support topics."
+            ),
             func=self._rag_search
         )
-        tools.append(rag_tool)
-        
-        # TODO: Add more tools as needed (e.g., order lookup, shipping tracker)
-        
-        return tools
-    
-    async def _rag_search(self, query: str) -> str:
+        return [rag_tool]
+
+    def _rag_search(self, query: str) -> str:
         """
-        TODO: Implement embedding-based retrieval from ChromaDB.
-        
-        The knowledge base is already set up with documents and embeddings.
-        You need to implement the search logic to retrieve relevant information.
-        
+        Search ChromaDB for relevant documents matching the query.
+
         Args:
-            query: Search query from the user (e.g., "What is your return policy?")
-            
+            query: User's search query
+
         Returns:
             str: Formatted relevant information from the knowledge base
-            
-        Available resources:
-        - self.collection: ChromaDB collection with embedded documents
-        - self.embedding_model: SentenceTransformer model for creating query embeddings
-        
-        Implementation steps:
-        1. Use ChromaDB's query method to search for relevant documents
-        2. Retrieve top 3-5 most relevant documents
-        3. Format the results into a readable response
-        4. Include document titles and categories for context
-        
-        ChromaDB query example:
-        ```python
-        results = self.collection.query(
-            query_texts=[query],
-            n_results=3,
-            include=['documents', 'metadatas', 'distances']
-        )
-        ```
-        
-        The results structure:
-        - results['documents'][0]: List of document contents
-        - results['metadatas'][0]: List of metadata (title, category)
-        - results['distances'][0]: List of similarity distances (lower = more similar)
         """
         if not hasattr(self, 'collection') or self.collection is None:
             return "Knowledge base not available. Please ensure the service is properly initialized."
-        
+
         try:
-            # TODO: Implement ChromaDB query to find relevant documents
-            # Hint: Use self.collection.query() method
-            
-            # TODO: Extract and format the results
-            # Hint: Format with document titles and content for better readability
-            
-            # TODO: Handle the case when no relevant documents are found
-            
-            # Placeholder return - replace with actual implementation
-            return f"TODO: Implement embedding-based search for query: '{query}'. Use ChromaDB's query method to search the knowledge base."
-            
+            results = self.collection.query(
+                query_texts=[query],
+                n_results=3,
+                include=['documents', 'metadatas', 'distances']
+            )
+
+            if not results['documents'] or not results['documents'][0]:
+                return "No relevant information found in the knowledge base."
+
+            formatted_results = []
+            for doc, meta, dist in zip(
+                results['documents'][0],
+                results['metadatas'][0],
+                results['distances'][0]
+            ):
+                title = meta.get('title', 'Document')
+                category = meta.get('category', 'general')
+                formatted_results.append(
+                    f"[{category.upper()}] {title}\n{doc}"
+                )
+
+            return "\n\n---\n\n".join(formatted_results)
+
         except Exception as e:
             return f"Error searching knowledge base: {str(e)}"
-    
+
     async def _create_agent(self, tools: List[Tool]) -> None:
-        """
-        TODO: Create the ReAct agent.
-        
-        Args:
-            tools: List of tools available to the agent
-        """
-        # TODO: Define agent prompt
-        prompt_template = """
-        You are a helpful customer support agent. Use the available tools to assist customers.
-        
-        You have access to the following tools:
-        {tools}
-        
-        Use the following format:
-        
-        Question: the input question you must answer
-        Thought: you should always think about what to do
-        Action: the action to take, should be one of [{tool_names}]
-        Action Input: the input to the action
-        Observation: the result of the action
-        ... (this Thought/Action/Action Input/Observation can repeat N times)
-        Thought: I now know the final answer
-        Final Answer: the final answer to the original input question
-        
-        Question: {input}
-        Thought: {agent_scratchpad}
-        """
-        
+        """Create the ReAct agent with tools and prompt."""
+
+        prompt_template = """You are a friendly and professional customer support agent. 
+Your job is to help customers with their questions about returns, shipping, payments, 
+warranty, account management, and other support topics.
+
+Always use the knowledge_search tool to find accurate information before answering.
+Be concise, clear, and empathetic in your responses.
+
+You have access to the following tools:
+{tools}
+
+Use the following format EXACTLY:
+
+Question: the input question you must answer
+Thought: think about what to do
+Action: the action to take, should be one of [{tool_names}]
+Action Input: the input to the action
+Observation: the result of the action
+... (Thought/Action/Action Input/Observation can repeat if needed)
+Thought: I now know the final answer
+Final Answer: the final answer to the original question
+
+Begin!
+
+Question: {input}
+Thought: {agent_scratchpad}"""
+
         prompt = PromptTemplate.from_template(prompt_template)
-        
-        # TODO: Create ReAct agent
-        # self.agent = create_react_agent(self.llm, tools, prompt)
-        # self.agent_executor = AgentExecutor.from_agent_and_tools(
-        #     agent=self.agent, tools=tools, verbose=True, memory=self.memory
-        # )
-    
+
+        self.agent = create_react_agent(self.llm, tools, prompt)
+        self.agent_executor = AgentExecutor.from_agent_and_tools(
+            agent=self.agent,
+            tools=tools,
+            verbose=True,
+            memory=self.memory,
+            handle_parsing_errors=True,
+            max_iterations=5
+        )
+
     async def process_query(self, text: str, **kwargs) -> str:
         """
-        TODO: Process user query using the agent.
-        
+        Process a user query through the ReAct agent.
+
         Args:
-            text: User's query
-            **kwargs: Additional context
-            
+            text: User's query string
+
         Returns:
             str: Agent's response
         """
         if not self.is_initialized:
-            raise RuntimeError("Agent not initialized")
-        
-        # TODO: Use agent executor to process the query
-        # result = await self.agent_executor.arun(input=text)
-        # return result
-        
-        return f"TODO: Process query: {text}"
-    
+            raise RuntimeError("Agent not initialized. Call initialize() first.")
+
+        try:
+            result = await self.agent_executor.ainvoke({"input": text})
+            return result.get("output", "I'm sorry, I couldn't process your request.")
+        except Exception as e:
+            print(f"Error processing query: {str(e)}")
+            # Fallback: direct RAG search if agent fails
+            rag_result = self._rag_search(text)
+            return f"Here's what I found:\n\n{rag_result}"
+
     async def cleanup(self) -> None:
-        """
-        TODO: Cleanup agent resources.
-        """
-        # TODO: Cleanup vector stores, close connections, etc.
+        """Cleanup agent resources."""
         self.llm = None
         self.agent = None
         self.agent_executor = None
         self.is_initialized = False
+        print("Agent cleaned up.")

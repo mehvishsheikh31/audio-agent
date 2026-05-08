@@ -33,17 +33,29 @@ class BaseSTT(ABC):
     
     @abstractmethod
     async def initialize(self) -> None:
-        """
+     import whisper
+     model_name = self.config.get("model", "base")
+     self.client = whisper.load_model(model_name)
+     self.is_initialized = True
+    """
         Initialize the STT service (setup API clients, load models, etc.).
         This method should be called before using the STT service.
         
         Raises:
             Exception: If initialization fails
         """
-        pass
-    
+        
     @abstractmethod
     async def transcribe(self, audio_bytes: bytes, **kwargs) -> str:
+     import tempfile, os
+     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_file:
+        temp_file.write(audio_bytes)
+        temp_path = temp_file.name
+     try:
+        result = self.client.transcribe(temp_path)
+        return result["text"].strip()
+     finally:
+        os.unlink(temp_path)
         """
         Transcribe audio bytes to text.
         

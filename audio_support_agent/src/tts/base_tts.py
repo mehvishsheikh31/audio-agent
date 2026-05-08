@@ -34,18 +34,27 @@ class BaseTTS(ABC):
     
     @abstractmethod
     async def initialize(self) -> None:
-        """
+     self.voice = self.config.get("voice", "en-US-AriaNeural")
+     self.is_initialized = True
+    """
         Initialize the TTS service (setup API clients, load models, etc.).
         This method should be called before using the TTS service.
         
         Raises:
             Exception: If initialization fails
         """
-        pass
+    pass
     
     @abstractmethod
     async def synthesize(self, text: str, **kwargs) -> bytes:
-        """
+     import edge_tts
+     communicate = edge_tts.Communicate(text, self.voice)
+     audio_bytes = b""
+     async for chunk in communicate.stream():
+        if chunk["type"] == "audio":
+            audio_bytes += chunk["data"]
+     return audio_bytes
+    """
         Convert text to speech audio bytes.
         
         Args:
@@ -59,7 +68,6 @@ class BaseTTS(ABC):
         Raises:
             Exception: If synthesis fails
         """
-        pass
     
     @abstractmethod
     async def synthesize_stream(self, text: str, **kwargs) -> io.BytesIO:
