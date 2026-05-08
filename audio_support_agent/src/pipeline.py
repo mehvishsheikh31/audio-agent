@@ -22,7 +22,15 @@ class PipelineConfig:
     tts_config: Dict[str, Any]
     enable_logging: bool = True
 
+# Add after PipelineConfig dataclass (around line 20)
 
+@dataclass
+class TranscriptData:
+    """Data structure for transcript information"""
+    user_input: str
+    agent_response: str
+    
+    
 class AudioSupportPipeline:
     """
     Main pipeline class that orchestrates STT -> LLM -> TTS flow.

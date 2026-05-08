@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from typing import Dict, Any, Optional
 import logging
 import time
+import base64
 import os
 from dotenv import load_dotenv
 
@@ -36,7 +37,15 @@ class TextResponse(BaseModel):
     audio_available: bool
     processing_time_ms: int
 
+class TranscriptData(BaseModel):
+    user_input: str
+    agent_response: str
 
+class EnhancedAudioResponse(BaseModel):
+    success: bool
+    audio_response: str  # base64 encoded
+    transcript: TranscriptData
+    processing_time_ms: int
 # ── App Setup ──────────────────────────────────────────────────────────────────
 
 app = FastAPI(
@@ -188,11 +197,11 @@ async def chat_text(request: TextRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/chat/audio")
+@app.post("/chat/audio", response_model=EnhancedAudioResponse)
 async def chat_audio(audio: UploadFile = File(...)):
     """
     Process audio through the full STT -> LLM -> TTS pipeline.
-    Upload a WAV file and receive an MP3 response.
+    Returns JSON with base64 audio, transcript, and timing.
     """
     global pipeline
 
@@ -207,12 +216,18 @@ async def chat_audio(audio: UploadFile = File(...)):
 
         logger.info(f"Received audio: {len(audio_bytes)} bytes, type: {audio.content_type}")
 
-        response_audio = await pipeline.process_audio(audio_bytes)
+        response_audio, transcript, processing_time_ms = await pipeline.process_audio_with_transcript(audio_bytes)
 
-        return Response(
-            content=response_audio,
-            media_type="audio/mpeg",
-            headers={"Content-Disposition": "attachment; filename=response.mp3"}
+        audio_b64 = base64.b64encode(response_audio).decode("utf-8")
+
+        return EnhancedAudioResponse(
+            success=True,
+            audio_response=audio_b64,
+            transcript=TranscriptData(
+                user_input=transcript.user_input,
+                agent_response=transcript.agent_response
+            ),
+            processing_time_ms=processing_time_ms
         )
 
     except HTTPException:

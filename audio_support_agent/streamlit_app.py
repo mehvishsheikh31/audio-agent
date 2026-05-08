@@ -114,32 +114,28 @@ def send_text_message(server_url: str, text: str, parameters: Dict[str, Any] = N
 def send_audio_message(server_url: str, audio_data: bytes) -> Dict[str, Any]:
     """Send audio data to the audio chat endpoint."""
     try:
-        files = {
-            'audio': ('audio.wav', audio_data, 'audio/wav')
-        }
+        files = {'audio': ('audio.wav', audio_data, 'audio/wav')}
         
         response = requests.post(
             f"{server_url}/chat/audio",
             files=files,
-            timeout=60  # Longer timeout for audio processing
+            timeout=60
         )
         
         if response.status_code == 200:
+            data = response.json()
+            # Decode base64 audio back to bytes
+            audio_bytes = base64.b64decode(data["audio_response"])
             return {
                 "success": True,
-                "audio_data": response.content,
-                "content_type": response.headers.get('content-type', 'audio/mpeg')
+                "audio_data": audio_bytes,
+                "transcript": data.get("transcript", {}),
+                "processing_time_ms": data.get("processing_time_ms", 0)
             }
         else:
-            return {
-                "success": False,
-                "error": f"HTTP {response.status_code}: {response.text}"
-            }
+            return {"success": False, "error": f"HTTP {response.status_code}: {response.text}"}
     except requests.exceptions.RequestException as e:
-        return {
-            "success": False,
-            "error": str(e)
-        }
+        return {"success": False, "error": str(e)}
 
 
 def record_audio(sample_rate: int = AUDIO_SAMPLE_RATE) -> Optional[bytes]:
@@ -339,22 +335,37 @@ def main():
                 st.audio(st.session_state.audio_data)
         
         with col2:
-            st.subheader(" Audio Output")
-            
-            # Send audio for processing
-            if st.session_state.audio_data:
-                if st.button(" Send Audio to Agent", type="primary"):
-                    with st.spinner("Processing audio... This may take a while."):
-                        result = send_audio_message(server_url, st.session_state.audio_data)
-                    
-                    if result['success']:
-                        st.success(" Audio processed successfully!")
-                        create_audio_player(result['audio_data'], "Agent Response")
-                    else:
-                        st.error(f" Error: {result['error']}")
-            else:
-                st.info("👆 Record or upload audio first")
+            st.subheader("📝 Transcript & Output")
     
+    if st.session_state.audio_data:
+        if st.button("🚀 Send Audio to Agent", type="primary"):
+            with st.spinner("Processing audio... This may take a while."):
+                result = send_audio_message(server_url, st.session_state.audio_data)
+            
+            if result['success']:
+                st.success("✅ Audio processed successfully!")
+                
+                # Audio player
+                st.markdown("**🔊 Agent Audio Response:**")
+                create_audio_player(result['audio_data'], "Agent Response")
+                
+                # Transcript display
+                transcript = result.get('transcript', {})
+                if transcript:
+                    st.markdown("---")
+                    st.markdown("**🗣️ You said:**")
+                    st.info(transcript.get('user_input', 'N/A'))
+                    st.markdown("**🤖 Agent responded:**")
+                    st.success(transcript.get('agent_response', 'N/A'))
+                
+                # Processing time
+                proc_time = result.get('processing_time_ms', 0)
+                if proc_time:
+                    st.caption(f"⏱️ Total processing time: {proc_time}ms ({proc_time/1000:.2f}s)")
+            else:
+                st.error(f"❌ Error: {result['error']}")
+    else:
+        st.info("👆 Record or upload audio first")
     with tab3:
         st.header(" Health Monitor")
         st.markdown("Monitor the health and status of all pipeline components.")
