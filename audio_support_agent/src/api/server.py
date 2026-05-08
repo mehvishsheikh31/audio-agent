@@ -12,7 +12,9 @@ from typing import Dict, Any, Optional
 import logging
 import time
 import os
+from dotenv import load_dotenv
 
+load_dotenv()
 from src.pipeline import AudioSupportPipeline, create_pipeline
 
 
